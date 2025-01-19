@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message {
+            max-width: 70%;
+            margin: 8px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .user-message {
+            background-color: #343541;
+            color: white;
+            margin-left: auto;
+            width: 100%;
+        }
+        .bot-message {
+            background-color: #444654;
+            color: white;
+            margin-right: auto;
+            width: 100%;
+        }
+        .timestamp {
+            font-size: 0.7rem;
+            color: #aaa;
+        }
+        .typing-effect {
+            display: inline-block;
+            white-space: pre-wrap;
+        }
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 15px;
+            background-color: white;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+            vertical-align: middle;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        pre {
+            background-color: #1e1e1e;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        code {
+            font-family: monospace;
+            color: #d4d4d4;
+        }
+    </style>
+</head>
+<body class="bg-gray-800">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-gray-800 rounded-lg p-6">
+            <!-- Chat Display -->
+            <div id="chat-display" class="chat-container overflow-y-auto mb-4">
+                {% for message in conversation %}
+                    <div class="message {% if message.role == 'user' %}user-message{% else %}bot-message{% endif %}">
+                        <div class="timestamp">{{ message.timestamp }}</div>
+                        <div class="content">{{ message.content }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="mb-4 p-4 border border-gray-700 rounded-lg">
+                <div class="flex flex-wrap gap-4 items-center text-white">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="cot-toggle" class="mr-2">
+                        Chain of Thought
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="compare-toggle" class="mr-2" checked>
+                        Compare Responses
+                    </label>
+                    <div class="flex items-center">
+                        <span class="mr-2">Temperature:</span>
+                        <input type="range" id="temperature-slider" 
+                               min="0.1" max="1.0" step="0.1" value="0.7" 
+                               class="w-32">
+                        <span id="temperature-value" class="ml-2">0.7</span>
+                    </div>
+                    <button id="clear-chat" 
+                            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                        Clear Chat
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="flex gap-4">
+                <input type="text" id="message-input" 
+                       class="flex-grow bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                       placeholder="Type your message...">
+                <button id="send-button" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const chatDisplay = document.getElementById('chat-display');
+            const cotToggle = document.getElementById('cot-toggle');
+            const compareToggle = document.getElementById('compare-toggle');
+            const temperatureSlider = document.getElementById('temperature-slider');
+            const temperatureValue = document.getElementById('temperature-value');
+            const clearChatButton = document.getElementById('clear-chat');
+
+            // Update temperature value display
+            temperatureSlider.addEventListener('input', function() {
+                temperatureValue.textContent = this.value;
+            });
+
+            // Clear chat
+            clearChatButton.addEventListener('click', async function() {
+                const response = await fetch('/clear_chat', {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    chatDisplay.innerHTML = '';
+                }
+            });
+
+            async function typeText(element, text) {
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor';
+                element.appendChild(cursor);
+
+                let currentText = '';
+                for (let i = 0; i < text.length; i++) {
+                    currentText += text[i];
+                    element.textContent = currentText;
+                    element.appendChild(cursor);
+                    
+                    // Adjust typing speed based on character type
+                    let delay = 30;
+                    if (text[i] === '\n') delay = 100;
+                    else if ('.!?'.includes(text[i])) delay = 200;
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                element.removeChild(cursor);
+            }
+
+            // Send message
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                // Add user message to display
+                appendMessage('user', message);
+                messageInput.value = '';
+
+                // Send to server
+                try {
+                    const response = await fetch('/send_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            use_cot: cotToggle.checked,
+                            compare_responses: compareToggle.checked,
+                            temperature: parseFloat(temperatureSlider.value)
+                        })
+                    });
+
+                    const data = await response.json();
+                    await appendMessage('bot', data.response, data.timestamp, true);
+                } catch (error) {
+                    console.error('Error:', error);
+                    appendMessage('bot', 'Sorry, there was an error processing your request.');
+                }
+            }
+
+            async function appendMessage(role, content, timestamp = new Date().toLocaleTimeString(), animate = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}-message`;
+                
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = 'timestamp';
+                timestampDiv.textContent = timestamp;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'typing-effect';
+                
+                messageDiv.appendChild(timestampDiv);
+                messageDiv.appendChild(contentDiv);
+                chatDisplay.appendChild(messageDiv);
+
+                if (animate && role === 'bot') {
+                    await typeText(contentDiv, content);
+                } else {
+                    contentDiv.textContent = content;
+                }
+                
+                chatDisplay.scrollTop = chatDisplay.scrollHeight;
+            }
+
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
