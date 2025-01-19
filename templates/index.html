@@ -7,7 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .chat-container {
-            height: calc(100vh - 200px);
+            height: calc(100vh - 150px); /* Keep this height */
+            overflow-y: scroll; /* Enable scrolling */
         }
         .message {
             max-width: 70%;
@@ -65,6 +66,28 @@
     <div class="container mx-auto px-4 py-8">
         <div class="bg-gray-800 rounded-lg p-6">
             <!-- Chat Display -->
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Aditya's LLM Chatbot</h1>
+        
+            <!-- Notes Section -->
+            <div class="note-box text-white mb-6">
+                <h2 class="font-bold mb-2">Important Notes:</h2>
+                <ul class="list-disc list-inside space-y-2">
+                    <li>⚠️ Chain of Thought and Compare Responses features can use up to 3x more tokens</li>
+                    <li>🤖 Running on 4o-mini backend - Get the code from GitHub to run locally</li>
+                    <li>💡 Please use tokens wisely and clear chat before starting new conversations</li>
+                </ul>
+            </div>
+    
+            <!-- Sample Prompts Section -->
+            <div class="sample-prompts text-white mb-6">
+                <h2 class="font-bold mb-2">Sample Prompts:</h2>
+                <ul class="list-disc list-inside space-y-2">
+                    <li>What is the meaning of life?</li>
+                    <li>How to make a pizza from scratch?</li>
+                </ul>
+                
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-6 text-center">Scroll Down</h1>
             <div id="chat-display" class="chat-container overflow-y-auto mb-4">
                 {% for message in conversation %}
                     <div class="message {% if message.role == 'user' %}user-message{% else %}bot-message{% endif %}">
@@ -191,7 +214,7 @@
                 }
             }
 
-            async function appendMessage(role, content, timestamp = new Date().toLocaleTimeString(), animate = false) {
+            async function appendMessage(role, content, timestamp = new Date().toLocaleTimeString(), animate = true) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${role}-message`;
                 
