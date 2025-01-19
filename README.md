@@ -1,6 +1,15 @@
 # Aditya's LLM Chatbot 🤖
 
-A sleek, interactive chatbot interface that supports chain-of-thought reasoning and response comparison. Built with Python Flask and modern web technologies, this chatbot can work with various LLM backends including Open AI's o1-mini models.
+A sleek, interactive chatbot interface that supports chain-of-thought reasoning and response comparison. Built with Python Flask and modern web technologies, this chatbot can work with various LLM.
+
+Give the demo 30 seconds to load, Please wait. Live Demo: [Aditya's LLM](https://hostproject2.onrender.com/)
+
+## ⚠️ Important Notice About Live Demo
+The live demo may take approximately 30 seconds to load. Please be patient
+
+![Screenshot](LLM-Chatbot.png)
+
+
 
 ## 🌟 Features
 
@@ -35,7 +44,7 @@ llm-chatbot/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/llm-chatbot.git
+git clone https://github.com/adityaanilraut/ChatBot-Chain-of-Thought.git
 cd llm-chatbot
 ```
 
